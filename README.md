@@ -95,6 +95,29 @@ BanksiaGUI at the built executable.
 
 Newest first. Each entry records what changed and what it enabled.
 
+## 2026-09-19 — First verified build
+
+Toolchain set up and the scaffold compiled and validated for the first time.
+
+**Toolchain**
+- MSYS2 with the UCRT64 environment: GCC 16.2, CMake 4.4, Ninja 1.13, GDB
+- Configures and builds clean with `-march=native`; no warnings under
+  `-Wall -Wextra`
+
+**Verification**
+- Perft suite passes all six standard positions to depth 5 — 480,105,445
+  nodes, every count matching the published values exactly
+- Throughput ~31M nodes/sec on an i7-12650H, single-threaded
+- `ctest` wired up and passing
+- Search confirmed working: finds forced mates, plays sensible opening moves
+
+**Fixed**
+- Mate scores were reported to the GUI as `score cp 29999` instead of
+  `score mate 1`. UCI treats the two differently, so a GUI displayed a forced
+  mate as a +299.99 pawn advantage. Now converts the internal
+  `VALUE_MATE - ply` representation into a move count, negative when the
+  engine is the side being mated.
+
 ## 2026-09-19 — Initial scaffold
 
 First working version: a complete engine skeleton, from board representation

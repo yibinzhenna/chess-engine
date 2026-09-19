@@ -1,6 +1,7 @@
 #include "search.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <chrono>
 #include <cstdio>
 
@@ -273,8 +274,23 @@ Move search_best_move(Position& pos, const SearchLimits& limits) {
 
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             Clock::now() - ctx.start).count();
-        std::printf("info depth %d score cp %d nodes %llu time %lld pv %s\n",
-                    depth, alpha, (unsigned long long)ctx.nodes,
+
+        // UCI distinguishes a centipawn score from a forced mate. Mate scores
+        // are stored as (VALUE_MATE - ply), so the distance in plies is the
+        // difference; the protocol wants it in MOVES, negative if we are the
+        // one getting mated.
+        char scoreStr[32];
+        if (std::abs(alpha) >= VALUE_MATE - MAX_PLY) {
+            const int plies  = VALUE_MATE - std::abs(alpha);
+            const int mateIn = (plies + 1) / 2;
+            std::snprintf(scoreStr, sizeof(scoreStr), "mate %d",
+                          alpha > 0 ? mateIn : -mateIn);
+        } else {
+            std::snprintf(scoreStr, sizeof(scoreStr), "cp %d", alpha);
+        }
+
+        std::printf("info depth %d score %s nodes %llu time %lld pv %s\n",
+                    depth, scoreStr, (unsigned long long)ctx.nodes,
                     (long long)ms, to_uci(best).c_str());
         std::fflush(stdout);
 

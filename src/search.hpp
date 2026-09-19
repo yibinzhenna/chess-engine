@@ -6,6 +6,7 @@ namespace chess {
 
 constexpr int VALUE_MATE = 30000;
 constexpr int VALUE_INF  = 32000;
+constexpr int MAX_PLY    = 128;
 
 struct SearchLimits {
     int       depth      = 64;   // hard cap on iterative deepening
