@@ -89,6 +89,8 @@ BanksiaGUI at the built executable.
 | `src/search.*` | Evaluation, alpha-beta, quiescence, iterative deepening |
 | `src/main.cpp` | UCI protocol and command-line interface |
 
+Planned work is tracked in [TODO.md](TODO.md).
+
 ---
 
 # Update log
