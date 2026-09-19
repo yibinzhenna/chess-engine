@@ -25,46 +25,62 @@ from layering several handicaps rather than turning one dial:
 | Evaluation noise (± centipawns) | Fuzzy positional judgment | Inconsistent plans |
 | Weighted random pick among top moves | Doesn't always find the best | Human inaccuracy |
 | Occasional deliberate 2nd/3rd-best move | Real mistakes at intervals | Losing the thread |
-| Quiescence search disabled | Hangs pieces to recaptures | A genuine beginner |
+| Quiescence search disabled | Misjudges every exchange | A genuine beginner |
 
-That last one is worth calling out: turning off quiescence reproduces the single
-most characteristic beginner mistake — trading into a losing recapture — without
-any artificial randomness at all.
+That last one is worth calling out. With quiescence off, leaf positions are
+scored mid-exchange with every pending capture ignored, so the bot both walks
+into losing trades and shies away from good ones — it misjudges material the
+way a real beginner does, with no artificial randomness at all.
 
 **Blunders must stay plausible.** Picking a random legal move reads instantly as
 a bot. Picking the third-best move, or missing a knight fork, reads as a person.
 
 ### Tasks
 
-- [ ] Add a `Skill` struct: max depth, node cap, eval noise sigma, blunder
+- [x] Add a `Skill` struct: max depth, per-move time cap, eval noise, blunder
       probability, top-N selection width, quiescence on/off
-- [ ] Thread it through `SearchLimits` into `search_best_move`
-- [ ] **Score every root move.** Alpha-beta only returns an exact score for the
+- [x] Thread it through `SearchLimits` into `search_best_move`
+- [x] **Score every root move.** Alpha-beta only returns an exact score for the
       best move; the rest are bounds, which is useless for "pick the third
-      best". Needs either a full-window search at the root or a MultiPV mode.
-      *This is the real work item — everything else is tuning.*
-- [ ] Weighted random selection among root moves within a centipawn window
-- [ ] Deterministic seeding, so a game can be replayed for debugging
-- [ ] Named presets: Beginner, Intermediate, Experienced, Pro
+      best". Implemented as a full-window root search, enabled only when a
+      handicap is active — it costs roughly 5x the nodes at equal depth, so
+      full strength keeps the narrowed window.
+- [x] Random selection among the top N root moves, after eval noise reorders
+      them. *Possible refinement: weight the choice by score gap (softmax)
+      instead of picking uniformly from the top N.*
+- [x] Deterministic seeding, so a game can be replayed for debugging
+- [x] Named presets: Beginner, Intermediate, Advanced, Magnus Carlsen
+- [x] Handle `setoption` in the UCI loop
+- [x] `chess match <a> <b> [games] [ms]` for engine-vs-engine ladder checks
 - [ ] Implement the standard UCI options `UCI_LimitStrength` (check) and
       `UCI_Elo` (spin) — chess GUIs render these as a built-in strength slider,
       so the levels work in Cute Chess and Arena with no custom UI
 - [ ] Add a `Skill Level` spin option (0–20) as the finer-grained control
-- [ ] Handle `setoption` in the UCI loop (not yet implemented at all)
 
 ### Target ladder
 
-| Preset | Target Elo | Rough recipe |
+| Preset | Target Elo | Recipe as implemented |
 |---|---|---|
-| Beginner | 600–800 | Depth 2, no quiescence, heavy eval noise, frequent blunders |
-| Intermediate | 1200–1400 | Depth 4, quiescence on, moderate noise, occasional blunder |
-| Experienced | 1700–1900 | Depth 6–8, light noise, rare blunder |
-| Pro | Full strength | No handicap, full time control |
+| Beginner | 600–800 | Depth 2, 200ms, no quiescence, ±150cp noise, 35% blunder, top 6 |
+| Intermediate | 1200–1400 | Depth 4, 500ms, ±60cp noise, 15% blunder, top 4 |
+| Advanced | 1700–1900 | Depth 7, 1500ms, ±20cp noise, 5% blunder, top 3 |
+| Magnus Carlsen | Full strength | No handicap, full clock |
 
-**Note the dependency:** "Pro" is defined by whatever the engine can actually
-do, which today is roughly 1600–1800. Every item in section 2 raises that
-ceiling and shifts the whole ladder up. The named presets should be re-measured
-after each strength improvement rather than assumed to hold.
+Measured head-to-head at 30ms/move (ladder ordering only — these are **not**
+Elo measurements against a rated opponent):
+
+| Matchup | Result |
+|---|---|
+| Intermediate vs Beginner | 20–0 (100%) |
+| Advanced vs Intermediate | 16–4 (80%) |
+| Magnus Carlsen vs Advanced | 17–2, 1 draw (87.5%) |
+| Magnus Carlsen vs Beginner | 10–0 (100%) |
+
+**Note the dependency:** "Magnus Carlsen" means full strength, which is
+whatever the engine can actually do — today roughly 1600–1800, nowhere near the
+name. Every item in section 2 raises that ceiling and shifts the whole ladder
+up, so the presets should be re-measured after each strength improvement rather
+than assumed to hold.
 
 ### Calibration
 

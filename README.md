@@ -72,6 +72,33 @@ build/chess test          # run the perft correctness suite
 build/chess divide 3      # per-root-move node counts, for debugging movegen
 build/chess bench         # search sanity check
 build/chess               # UCI loop — what a chess GUI connects to
+
+build/chess match advanced beginner 20 100    # engine vs engine
+```
+
+## Difficulty levels
+
+Four opponents, selectable from any UCI GUI via the `Difficulty` option:
+
+| Level | Handicaps |
+|---|---|
+| Beginner | 2-ply search, no quiescence, heavy evaluation noise, frequent blunders |
+| Intermediate | 4-ply search, moderate noise, occasional blunder |
+| Advanced | 7-ply search, light noise, rare blunder |
+| Magnus Carlsen | Full strength, no handicap |
+
+Capping search depth alone makes a bot that is weak in an inhuman way — it
+still finds every short tactic perfectly, then walks into a longer one. The
+weaker levels instead layer several handicaps so their mistakes stay plausible:
+reduced depth, noise added to the evaluation, and an occasional deliberate
+choice of the second- or third-best move. Beginner additionally searches with
+quiescence disabled, so it misjudges exchanges the way a real beginner does,
+with no artificial randomness involved.
+
+From the command line:
+
+```
+build/chess match "magnus carlsen" beginner 20 100
 ```
 
 To play against it, point a UCI-compatible GUI such as Cute Chess, Arena, or
@@ -96,6 +123,56 @@ Planned work is tracked in [TODO.md](TODO.md).
 # Update log
 
 Newest first. Each entry records what changed and what it enabled.
+
+## 2026-09-19 — Difficulty levels
+
+Four selectable opponents: Beginner, Intermediate, Advanced, Magnus Carlsen.
+
+**Difficulty system**
+- `Skill` struct holding the per-level handicaps: depth cap, per-move time cap,
+  evaluation noise, blunder probability, top-N selection width, and whether
+  quiescence search runs at all
+- Evaluation noise reorders the engine's own ranking of quiet moves, modelling
+  fuzzy positional judgment
+- Blunders pick from the top N root moves rather than uniformly at random, so
+  mistakes stay plausible instead of reading as a bot
+- Beginner runs with quiescence disabled: leaf positions get scored
+  mid-exchange, so it misjudges material without any injected randomness
+- Forced mates are always played, at every level — realism would allow missing
+  them, but games that never end are worse
+- Deterministic when seeded, so any game can be replayed for debugging
+
+**Search**
+- Root moves are now all scored and kept sorted, rather than tracking only the
+  best. Handicapped levels need an exact score for every root move; alpha-beta
+  returns mere bounds for the also-rans, which cannot be ranked.
+- Full-window root search when a handicap is active, narrowed window at full
+  strength. The full window costs roughly 5x the nodes at equal depth, which is
+  why it is not used for Magnus Carlsen.
+
+**Interface**
+- `setoption` handling, previously missing entirely
+- UCI option `Difficulty`, advertised as a combo so GUIs render a dropdown
+- Non-standard `difficulty` command for setting and querying it interactively
+- `chess match <a> <b> [games] [ms]` plays two difficulties against each other,
+  alternating colors, with checkmate / stalemate / fifty-move / insufficient
+  material / move-cap adjudication
+
+**Verified**
+- Perft suite still exact at depth 5 (480,105,445 nodes) — the difficulty work
+  did not touch move generation
+- Ladder is strictly monotonic at 30ms/move: Intermediate 20–0 over Beginner,
+  Advanced 80% over Intermediate, Magnus Carlsen 87.5% over Advanced, and
+  10–0 over Beginner
+- Beginner misses a 3-ply knight fork that every higher level finds
+- Beginner varies its opening move across runs; Magnus Carlsen is deterministic
+- Mirror matches land within noise of 50% at 20 games
+- Identical seeds reproduce identical match results
+
+**Known gap**
+- The Elo figures in `TODO.md` are design targets, not measurements. The
+  head-to-head results confirm the levels are correctly *ordered*; establishing
+  what each one is actually worth needs matches against a rated opponent.
 
 ## 2026-09-19 — First verified build
 
