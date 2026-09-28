@@ -65,6 +65,17 @@ cmake --build build --config Release
 
 Requires a C++20 compiler (GCC 11+, Clang 13+, or MSVC 2022) and CMake 3.20+.
 
+To build the browser version instead (requires
+[Emscripten](https://emscripten.org/)):
+
+```
+source ~/emsdk/emsdk_env.sh
+./build-wasm.sh
+```
+
+That emits `chess-engine.js` and `chess-engine.wasm` into the personal-website
+repo's `chess/` directory, which serves them as static files.
+
 ## Usage
 
 ```
@@ -123,6 +134,40 @@ Planned work is tracked in [TODO.md](TODO.md).
 # Update log
 
 Newest first. Each entry records what changed and what it enabled.
+
+## 2026-09-28 — WebAssembly build, playable in the browser
+
+The engine now runs client-side at [yibinz.com](https://yibinz.com/#chess), with
+no server involved.
+
+**WebAssembly**
+- `src/wasm_api.cpp`: a flat C API over the engine, since JavaScript cannot call
+  C++ methods directly. Exposes the position, legal moves, make/undo, status and
+  search, plus a 64-character board string that saves the UI re-parsing FEN on
+  every render.
+- `StateInfo` objects are held in a `vector<unique_ptr<...>>` rather than a
+  plain vector — they form a linked list through `previous`, so a reallocation
+  would dangle every back-pointer.
+- `build-wasm.sh` compiles with `em++` and emits a 134KB `.wasm` plus 15KB of
+  JS glue. (`emcc` compiles C++ but links the C runtime, so every libc++ symbol
+  comes back undefined — `em++` is required.)
+- Rejects a FEN with a missing king, which would otherwise make `king_square()`
+  read an empty bitboard.
+
+**Browser front end** (lives in the personal-website repo)
+- Search runs in a Web Worker; on the main thread it would freeze the page for
+  the whole thinking time
+- Click-to-move board with legal-move dots, capture rings, last-move and
+  in-check highlighting, board flip when playing black, and a promotion picker
+- Difficulty dropdown wired to the four presets
+- The 134KB engine is only fetched when the chess page is first opened
+
+**Verified in-browser**
+- Legal move filtering, promotion (all four pieces), undo, board flip, engine
+  opening as white when the user plays black
+- Checkmate both ways, stalemate, insufficient material, and check display
+- Board locks once the game is over; no console errors
+- Mobile layout at 375px: no horizontal overflow, 41px squares
 
 ## 2026-09-19 — Difficulty levels
 

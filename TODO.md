@@ -159,5 +159,6 @@ Each of these raises the ceiling that "Pro" is measured against.
 - [ ] Opening book (Polyglot format)
 - [ ] Syzygy endgame tablebase probing
 - [ ] NNUE evaluation
-- [ ] A simple GUI or web front end, so the difficulty levels are playable
-      without installing a separate chess program
+- [x] A web front end, so the difficulty levels are playable without
+      installing a separate chess program — compiled to WebAssembly and
+      embedded at yibinz.com/#chess (see `build-wasm.sh`)
