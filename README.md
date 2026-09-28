@@ -74,7 +74,7 @@ source ~/emsdk/emsdk_env.sh
 ```
 
 That emits `chess-engine.js` and `chess-engine.wasm` into the personal-website
-repo's `chess/` directory, which serves them as static files.
+repo's `chess-engine/` directory, which serves them as static files.
 
 ## Usage
 

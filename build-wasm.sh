@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-OUT_DIR="${1:-../../personal website/personal-website/chess}"
+OUT_DIR="${1:-../../personal website/personal-website/chess-engine}"
 mkdir -p "$OUT_DIR"
 
 # main.cpp is excluded (it owns main() and the UCI loop) and perft.cpp is
